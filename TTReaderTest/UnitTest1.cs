@@ -21,16 +21,16 @@ namespace TTReaderTest
     [TestMethod]
     public void TTReader()
     {
-      var rdr = xmlttreader.ReaderT.Build(FieldMapping.FieldMapper<RTBPMod>.Create()
+      var mapper = FieldMapping.FieldMapper<RTBPMod>.Create(false)
         .field(x => x.pmod, "pmod")
         .field(x => x.nextObjNum, "nxt-obj-num")
         .field(x => x.desc, "description")
         .field(x => x.prodID, "product-id")
         .field(x => x.module, "Module")
         .field(x => x.verCounter, "ver-counter")
-        );
+        ;
 
-      rdr.init("c:\\tmp\\rtb.rtb_pmod.xml");
+      var rdr = xmlttreader.ReaderT.Build(mapper, "c:\\tmp\\rtb.rtb_pmod.xml");
 
       var lst = rdr.ToList();
       Assert.IsNotNull(lst);

@@ -16,15 +16,15 @@ namespace xmlttreader
    */
   public static class ReaderT
   {
-    public static Reader<T> Build<T>(FieldMapping.FieldMapper<T> mapper) where T : class, new()
+    public static IEnumerable<T> Build<T>(FieldMapping.FieldMapper<T> mapper, string filename) where T : class, new()
     {
       var nr = new Reader<T>();
       nr.mapper = mapper;
+      nr.init(filename);
       return nr;
     }
   }
-
-
+  
   public class Reader<T> : IEnumerable<T> where T : class, new()
   {
     private System.Xml.XmlReader _rdr;
@@ -36,6 +36,7 @@ namespace xmlttreader
     {
       _rdr = System.Xml.XmlReader.Create(new System.IO.FileStream(file, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite));
 
+      _obj = null;
       _rdr.MoveToContent();
       _rdr.Read();
     }
