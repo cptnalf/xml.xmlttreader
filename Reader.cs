@@ -28,7 +28,6 @@ namespace xmlttreader
   public class Reader<T> : IEnumerable<T> where T : class, new()
   {
     private System.Xml.XmlReader _rdr;
-    private T _obj;
 
     public FieldMapping.FieldMapper<T> mapper {get;set; }
 
@@ -36,7 +35,6 @@ namespace xmlttreader
     {
       _rdr = System.Xml.XmlReader.Create(new System.IO.FileStream(file, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite));
 
-      _obj = null;
       _rdr.MoveToContent();
       _rdr.Read();
     }
@@ -44,6 +42,7 @@ namespace xmlttreader
     public IEnumerator<T> GetEnumerator()
     {
       T obj = null;
+      Dictionary<string,string> values = null;
 
       while(!_rdr.EOF && _rdr.ReadState == System.Xml.ReadState.Interactive)
         {
@@ -54,17 +53,48 @@ namespace xmlttreader
                {
                   if (_rdr.Name == "ttRow")
                     {
-                      if (obj != null) { yield return obj; }
-                      obj = mapper.create();
+                      if (obj != null || values != null) 
+                        {
+                          obj = _dovalues(obj, values);
+                          if (obj != null) { yield return obj; }
+
+                          obj = null;
+                          values = null;
+                        }
+                      if (mapper != null && mapper.overwrite)
+                        { obj = mapper.create(); }
+                      else
+                        { values = new Dictionary<string, string>(); }
                     }
                   else
                     {
-                      if (obj != null)
+                      if (values != null || obj != null)
                         {
                           var name = _rdr.Name;
                           var contents = _rdr.ReadElementContentAsString();
-              
-                          mapper.set(obj, name, contents);
+                          
+                          if (mapper != null && this.mapper.overwrite)
+                            { mapper.set(obj, name, contents); }
+                          else
+                            {
+                              if (values.ContainsKey(name)) 
+                                {
+                                  if (mapper != null)
+                                    {
+                                      if (obj == null) { obj = mapper.create(); }
+                                      mapper.set(obj, name, values[name]);
+                                      mapper.set(obj, name, contents);
+                                      /* nulls are ignored always.
+                                       * if this converts to another thing (eg int/bool)
+                                       * we'll get the default value or zero most likely
+                                       * which should be ok.
+                                       */
+                                      values[name] = null; 
+                                    }
+                                  else { values[name] = values[name] + contents; }
+                                }
+                              else { values.Add(name, contents); }
+                            }
                         }
                     }
                 }
@@ -73,9 +103,25 @@ namespace xmlttreader
           _rdr.Read();
         }
 
-      if (obj != null) { yield return obj; }
+      if (obj != null || values != null) 
+        { 
+          obj = _dovalues(obj, values);
+          if (obj != null) { yield return obj; }
+        }
     }
 
     IEnumerator IEnumerable.GetEnumerator() { return this.GetEnumerator(); }
+
+    private T _dovalues(T obj, Dictionary<string,string> dict)
+    {
+      if (dict != null) 
+        {
+          if (obj == null) { obj = mapper.create(); }
+
+          mapper.convert(obj, dict);
+        }
+      
+      return obj;
+    }
   }
 }
