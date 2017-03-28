@@ -25,6 +25,26 @@ namespace TTReaderTest
     public Task1() { this.description = new List<string>(); }
   }
 
+  public class Ver1
+  {
+    public string objname {get;set;}
+    public int version {get;set;}
+    public string description {get;set;}
+    public string text_desc {get;set;}
+    public bool runable {get;set;}
+    public uint taskid {get;set;}
+    public long repaddr {get;set;}
+    public ulong dsite {get;set;}
+    public List<bool> partsused {get;set;}
+    public List<string> pname {get;set;}
+
+    public Ver1() 
+    {
+      partsused = new List<bool>();
+      pname = new List<string>();
+    }
+  }
+
   [TestClass]
   public class UnitTest1
   {
@@ -74,6 +94,43 @@ namespace TTReaderTest
           CollectionAssert.AllItemsAreNotNull(x.description);
           Assert.IsNotNull(x.summary);
         }
+    }
+
+    [TestMethod]
+    public void TTArrayTest2()
+    {
+      var mapper = FieldMapping.FieldMapper<Ver1>.Create(false)
+        .field(x => x.objname, "object")
+        .field(x => x.description, "description")
+        .field(x => x.text_desc, "text-desc")
+        .field(x => x.version, "version")
+        .field(x => x.dsite, "dsite")
+        .field(x => x.repaddr, "rep-address")
+        .field(x => x.taskid, "task-num")
+        .field(x => x.runable, "runable")
+        .list(x => x.partsused, "parts-used")
+        .list(x => x.pname, true, (x,k) => string.IsNullOrWhiteSpace(k) ? null : k, "pname")
+        ;
+      var rdr = xmlttreader.ReaderT.Build(mapper, "c:\\tmp\\rtb.rtb_ver.xml");
+      var lst = rdr.ToList();
+
+      bool haveText = false;
+
+      Assert.IsNotNull(lst);
+      CollectionAssert.AllItemsAreNotNull(lst);
+      foreach(var x in lst)
+        {
+          Assert.AreNotEqual(0, x.dsite);
+          //Assert.AreNotEqual(0, x.repaddr);
+          Assert.AreNotEqual(0, x.taskid); /* might not be the case. */
+          Assert.AreNotEqual(0, x.version);
+          Assert.IsNotNull(x.description);
+          CollectionAssert.AllItemsAreNotNull(x.partsused);
+          CollectionAssert.AllItemsAreNotNull(x.pname);
+          if (!haveText && !string.IsNullOrWhiteSpace(x.text_desc)) { haveText = true; }
+        }
+
+      Assert.IsTrue(haveText, "Did not find any text-desc fields that weren't null or empty.");
     }
   }
 }
