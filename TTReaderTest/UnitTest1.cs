@@ -31,7 +31,7 @@ namespace TTReaderTest
     public int version {get;set;}
     public string description {get;set;}
     public string text_desc {get;set;}
-    public bool runable {get;set;}
+    public bool isroot {get;set;}
     public uint taskid {get;set;}
     public long repaddr {get;set;}
     public ulong dsite {get;set;}
@@ -107,7 +107,7 @@ namespace TTReaderTest
         .field(x => x.dsite, "dsite")
         .field(x => x.repaddr, "rep-address")
         .field(x => x.taskid, "task-num")
-        .field(x => x.runable, "runable")
+        .field(x => x.isroot, (x,k) => { x.isroot = k; return x.isroot; } , "root-ver") /* actually want overwrite here. */
         .list(x => x.partsused, "parts-used")
         .list(x => x.pname, true, (x,k) => string.IsNullOrWhiteSpace(k) ? null : k, "pname")
         ;
@@ -115,6 +115,7 @@ namespace TTReaderTest
       var lst = rdr.ToList();
 
       bool haveText = false;
+      bool isrunnable = false;
 
       Assert.IsNotNull(lst);
       CollectionAssert.AllItemsAreNotNull(lst);
@@ -127,10 +128,12 @@ namespace TTReaderTest
           Assert.IsNotNull(x.description);
           CollectionAssert.AllItemsAreNotNull(x.partsused);
           CollectionAssert.AllItemsAreNotNull(x.pname);
+          if (!isrunnable) { isrunnable = x.isroot; }
           if (!haveText && !string.IsNullOrWhiteSpace(x.text_desc)) { haveText = true; }
         }
 
       Assert.IsTrue(haveText, "Did not find any text-desc fields that weren't null or empty.");
+      Assert.AreEqual(true, isrunnable);
     }
   }
 }
