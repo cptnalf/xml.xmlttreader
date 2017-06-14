@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Reader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReaderT.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FieldMapping\FieldMapping.csproj">

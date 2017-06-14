@@ -8,29 +8,40 @@ using System.Threading.Tasks;
 
 namespace xmlttreader
 {
-  /* open file.
-   * look for ttRow
-   *  all the other elements in here are fields.
-   *  find a good mapping?
-   * 
-   */
-  public static class ReaderT
-  {
-    public static IEnumerable<T> Build<T>(FieldMapping.FieldMapper<T> mapper, string filename) where T : class, new()
-    {
-      var nr = new Reader<T>();
-      nr.mapper = mapper;
-      nr.init(filename);
-      return nr;
-    }
-  }
-  
+  /// <summary>
+  /// Class to read xml files encoded as:
+  /// &lt;tt&gt;
+  ///   &lt;ttRow&gt;...&lt;ttRow&gt;
+  ///   ...
+  /// &lt;/tt&gt;
+  /// 
+  /// where 'tt' is the default literal.
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  /// <remarks>
+  /// Progress 10.2b currently generates these files 
+  /// when a Write-Xml call is made for a (temp-)table handle.
+  /// </remarks>
   public class Reader<T> : IEnumerable<T> where T : class, new()
   {
     private System.Xml.XmlReader _rdr;
+    private string _base = "tt";
+    private string _rowPostfix = "Row";
 
+    /// <summary>the name of the root element (defaults to 'tt')</summary>
+    public string baseName {get { return _base; } set { _base = value; } }
+    /// <summary>the postfix of the row elements (defaults to 'Row', resulting in default of 'ttRow')</summary>
+    public string rowPostfix {get { return _rowPostfix; } set { _rowPostfix = value; } }
+
+    /// <summary>
+    /// map the keys in the dictionary to actual fields on the object.
+    /// </summary>
     public FieldMapping.FieldMapper<T> mapper {get;set; }
 
+    /// <summary>
+    /// start the reader by pointing it to a file.
+    /// </summary>
+    /// <param name="file"></param>
     public void init(string file)
     {
       _rdr = System.Xml.XmlReader.Create(new System.IO.FileStream(file, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite));
@@ -39,19 +50,32 @@ namespace xmlttreader
       _rdr.Read();
     }
 
+    /// <summary>
+    /// get an enumerator of objects generated from the contents of the XML file.
+    /// </summary>
+    /// <returns></returns>
     public IEnumerator<T> GetEnumerator()
     {
       T obj = null;
       Dictionary<string,string> values = null;
+      string rootname = _base;
+      string rowName = _base + _rowPostfix;
 
+      /* open file.
+       * look for ttRow
+       *  all the other elements in here are fields.
+       *  find a good mapping?
+       * 
+       */
+      
       while(!_rdr.EOF && _rdr.ReadState == System.Xml.ReadState.Interactive)
         {
           if (_rdr.NodeType == System.Xml.XmlNodeType.Element)
             {
-              if (_rdr.Name == "tt") {  }
+              if (_rdr.Name == rootname) {  }
               else
-               {
-                  if (_rdr.Name == "ttRow")
+                {
+                  if (_rdr.Name == rowName)
                     {
                       if (obj != null || values != null) 
                         {
@@ -65,9 +89,10 @@ namespace xmlttreader
                         { obj = mapper.create(); }
                       else
                         { values = new Dictionary<string, string>(); }
-                    }
+                    } /* end start of a new record. */
                   else
                     {
+                      /* probably a field in the row. */
                       if (values != null || obj != null)
                         {
                           var name = _rdr.Name;
@@ -96,7 +121,7 @@ namespace xmlttreader
                               else { values.Add(name, contents); }
                             }
                         }
-                    }
+                    } /* end field in row. */
                 }
             }
 
